@@ -1,0 +1,48 @@
+# Python bytecode and cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django specific files
+*.log
+db.sqlite3
+local_settings.py
+
+# Ignore compiled files
+*.so
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# If using pipenv
+Pipfile.lock
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Django static and media files (if generated locally)
+staticfiles/
+media/
+
+# Coverage and test output
+.coverage
+.tox/
+htmlcov/
+*.cover
+*.py,cover
+
+# IDE and editor folders
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Node modules (if using Node for frontend assets)
+node_modules/
+
