@@ -1,6 +1,85 @@
 # ChefChat
 
+## Overview
 
+ChefChat is a recipe management application that allows users to save cooking recipes, create shopping lists, and interact with the application through a chatbot interface. The application leverages an external Large Language Model (LLM) to analyze and structure recipe data, provide personalized suggestions, and manage user interactions.
+
+## Features
+
+- **Recipe Management**: Save and manage cooking recipes with fields such as title, ingredients, recipe steps, Cookidoo integration, freezing options, number of servings, preparation and total duration, and images.
+- **Chatbot Interaction**: Interact with the application using a chatbot to add recipes, get cooking suggestions, and generate shopping lists.
+- **Context Preservation**: Save conversation history to provide personalized, context-aware suggestions and avoid repeating recipes.
+- **Hybrid Storage Approach**: Store full chat logs and generate summary points for efficient context retrieval.
+- **User-Defined Retention Policy**: Allow users to control how long their history is stored, with options for automatic deletion.
+- **User Interface for History Management**: Provide a UI to view, search, filter, manage, edit, or delete past interactions.
+- **Weekly Meal Planning**: Suggest dishes for a week and allow users to swap recipes easily.
+- **Shopping List Generation**: Create shopping lists based on selected recipes.
+
+## Getting Started
+
+To set up the development environment, follow these steps:
+
+1. Create a virtual environment:
+    ```bash
+    # python -m venv .venv
+    source .venv/bin/activate
+    pip install --upgrade pip
+    pip install -r requirements.txt
+    ```
+
+2. Configure your API key for OpenAI.
+```markdown
+2. Configure your API key for OpenAI:
+
+    ```bash
+    export OPENAI_API_KEY='your-api-key-here'
+    ```
+
+3. Run the application:
+
+    ```bash
+    python manage.py runserver
+    ```
+```
+
+## Development Approach
+
+The development of ChefChat will be incremental, starting with a clear understanding of the product goals and gradually drilling down into the implementation details. Key considerations include:
+
+- **Product Perspective**: Define the desired features and user experience.
+- **Technology Selection**: Evaluate and choose appropriate technologies, such as Retrieval-Augmented Generation (RAG) for managing large prompts.
+- **Step-by-Step Implementation**: Break down the project into manageable steps, starting with core features and expanding functionality over time.
+
+## Questions and Feedback
+
+If you have any questions or need further clarification, please feel free to ask. The goal is to ensure a clear understanding of the product and its features before diving into the technical implementation.
+
+## Contribution
+
+Contributions are welcome! Please follow the standard GitHub workflow for submitting pull requests and ensure your code adheres to the project's coding standards.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Contact
+
+For any inquiries or support, please contact the project maintainer.
+
+
+
+
+
+```bash
+# python -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+
+
+# Prompt to start with
 
 That is how the story began:
 
