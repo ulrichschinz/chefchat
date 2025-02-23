@@ -1,5 +1,6 @@
 # ChefChat
 
+
 ## Overview
 
 ChefChat is a recipe management application that allows users to save cooking recipes, create shopping lists, and interact with the application through a chatbot interface. The application leverages an external Large Language Model (LLM) to analyze and structure recipe data, provide personalized suggestions, and manage user interactions.

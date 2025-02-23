@@ -1,14 +1,14 @@
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from .models import Recipe
-from .vector.index import build_faiss_index, save_index
+from .vector.index import build_faiss_index, save_index_with_mapping
 from django.conf import settings
 
 def rebuild_index():
     recipes = Recipe.objects.all()
     if recipes.exists():
-        index = build_faiss_index(recipes)
-        save_index(index, "faiss_index.index")
+        index,mapping = build_faiss_index(recipes)
+        save_index_with_mapping(index, mapping)
         print("FAISS index rebuilt.")
     else:
         print("No recipes found, index not rebuilt.")

@@ -2,13 +2,14 @@ from openai import OpenAI
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+from chefchat.config import OPENAI_API_KEY
 from recipes.serializers import ChatRequestSerializer
-from recipes.vector.index import query_index
+from recipes.vector.index import query_index_with_context
 from recipes.models import ChatLog, Recipe
 import os
 
 # Make sure your OpenAI API key is set
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 @api_view(['POST'])
 def chat_interaction(request):
@@ -18,17 +19,10 @@ def chat_interaction(request):
 
         # Retrieve relevant recipes from the FAISS index
         try:
-            distances, indices = query_index(user_message, k=3)
+            recipe_ids, distances = query_index_with_context(user_message, k=3)
+            recipes = Recipe.objects.filter(id__in=recipe_ids)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        # Convert indices to list
-        indices_list = [index for sublist in indices for index in sublist]
-
-        print(f"Indices: {indices_list}")
-        
-        # Retrieve the actual recipes using the indices
-        recipes = Recipe.objects.filter(id__in=indices_list)
 
         # Build the context with the retrieved recipes
         context_text = "Relevant recipes:\n"
@@ -37,12 +31,13 @@ def chat_interaction(request):
             context_text += f"  Ingredients (raw): {recipe.ingredients_raw}\n"
             context_text += f"  Ingredients (structured): {recipe.ingredients_structured}\n"
             context_text += f"  Instructions: {recipe.instructions}\n"
-            context_text += f"  Is Cookidoo: {recipe.is_cookidoo}\n"
-            context_text += f"  Can Freeze: {recipe.can_freeze}\n"
+            context_text += f"  This is a cookidoo recipe.\n" if recipe.is_cookidoo else "  This is not a cookidoo recipe.\n"
+            context_text += f"  This recipe can be frozen.\n" if recipe.can_freeze else "  This recipe cannot be frozen.\n"
             context_text += f"  Number of People: {recipe.number_of_people}\n"
             context_text += f"  Work Duration: {recipe.duration_work} minutes\n"
             context_text += f"  Total Duration: {recipe.duration_total} minutes\n"
 
+        print(context_text)
         # Construct the prompt for the LLM
         messages = [
             {"role": "system", "content": "You are a helpful cooking assistant. Only use information from the context provided. If there is nothing useful, respond with: 'Sorry, but I could not find anything related to your request.'"},
