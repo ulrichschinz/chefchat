@@ -1,3 +1,4 @@
+import logging
 from openai import OpenAI
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -6,7 +7,8 @@ from chefchat.config import OPENAI_API_KEY
 from recipes.serializers import ChatRequestSerializer
 from recipes.vector.index import query_index_with_context
 from recipes.models import ChatLog, Recipe
-import os
+
+log = logging.getLogger(__name__)
 
 # Make sure your OpenAI API key is set
 client = OpenAI(api_key=OPENAI_API_KEY)
@@ -37,7 +39,7 @@ def chat_interaction(request):
             context_text += f"  Work Duration: {recipe.duration_work} minutes\n"
             context_text += f"  Total Duration: {recipe.duration_total} minutes\n"
 
-        print(context_text)
+        log.debug(context_text)
         # Construct the prompt for the LLM
         messages = [
             {"role": "system", "content": "You are a helpful cooking assistant. Only use information from the context provided. If there is nothing useful, respond with: 'Sorry, but I could not find anything related to your request.'"},

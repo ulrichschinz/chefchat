@@ -10,11 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import os
+from chefchat.config import BASE_DIR
 from pathlib import Path
-
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -27,6 +25,56 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# Logging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        # Handler for detailed application logs.
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': str(BASE_DIR / 'app.log'),
+            'formatter': 'verbose',
+        },
+        # Handler for capturing what would normally be printed to stdout.
+        'stdout_file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': str(BASE_DIR / 'stdout.log'),
+            'formatter': 'simple',
+        },
+        # Optionally, a console handler if you want to see some logs in the terminal.
+        'console': {
+            'level': 'WARNING',  # Adjust level so that normal stdout stays relatively clean.
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        # Root logger: logs all messages using both file handlers.
+        '': {
+            'handlers': ['file', 'stdout_file', 'console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        # Django's own logger (adjust as needed)
+        'django': {
+            'handlers': ['file', 'stdout_file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
 
 # Application definition
 
@@ -42,6 +90,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -49,6 +99,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 
 ROOT_URLCONF = 'chefchat.urls'

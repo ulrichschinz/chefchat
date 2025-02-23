@@ -46,5 +46,10 @@ htmlcov/
 # Node modules (if using Node for frontend assets)
 node_modules/
 
+# Faiss index and mapping
 faiss_index.index
 faiss_mapping.json
+
+# Logfiles
+app.log
+stdout.log
