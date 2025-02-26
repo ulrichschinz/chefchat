@@ -1,19 +1,27 @@
-import { useState } from 'react'
-import ChatWindow from './ChatWindow'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { useContext } from 'react';
+import ChatWindow from './ChatWindow';
+import './App.css';
+import Login from './Login';
+import { AuthContext } from './AuthContext';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const {authTokens, setAuthTokens} = useContext(AuthContext);
+
+  console.log("in app: " + authTokens);
+
+  const handleLogin = (tokens) => {
+    setAuthTokens(tokens);
+  };
 
   return (
-    <>
       <div className="App">
-        <ChatWindow />
+        {authTokens ? (
+          <ChatWindow />
+        ) : (
+          <Login onLogin={handleLogin} />
+        )}
       </div>
-    </>
-  )
+  );
 }
 
-export default App
+export default App;

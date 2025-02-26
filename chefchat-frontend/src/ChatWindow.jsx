@@ -1,30 +1,23 @@
-import React, { useState } from 'react';
-import './ChatWindow.css'; // Hier kannst du dein CSS für das Chatfenster ablegen
+import React, { useState, useContext } from 'react';
+import './ChatWindow.css';
+import { sendAuthenticatedRequest } from './api';
+import { AuthContext } from './AuthContext';
 
 const ChatWindow = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const { authTokens } = useContext(AuthContext);
 
   const sendMessage = async () => {
     if (!input.trim()) return;
-    
-    // Füge die Benutzernachricht zum Chatverlauf hinzu
+
     const newMessage = { sender: 'user', text: input };
     setMessages(prev => [...prev, newMessage]);
-    
+
     setLoading(true);
     try {
-      const response = await fetch('http://127.0.0.1:8000/recipes/chat/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ message: input })
-      });
-      
-      const data = await response.json();
-      // Füge die Antwort des Bots hinzu
+      const data = await sendAuthenticatedRequest('http://127.0.0.1:8000/recipes/chat/', 'POST', { message: input }, authTokens?.token);
       const botMessage = { sender: 'bot', text: data.response };
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
@@ -38,6 +31,18 @@ const ChatWindow = () => {
     if (e.key === 'Enter') {
       sendMessage();
     }
+  };
+
+  const { setAuthTokens } = useContext(AuthContext);
+
+  const handleLogout = () => {
+    setAuthTokens(null);
+    try {
+      const data = sendAuthenticatedRequest('http://127.0.0.1:8000/logout/', 'POST', { message: 'logout' }, authTokens?.token);
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
+    document.cookie = 'authTokens=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
   };
 
   return (
@@ -59,6 +64,7 @@ const ChatWindow = () => {
           onKeyPress={handleKeyPress}
         />
         <button onClick={sendMessage}>Senden</button>
+        <button onClick={handleLogout}>Logout</button>
       </div>
     </div>
   );

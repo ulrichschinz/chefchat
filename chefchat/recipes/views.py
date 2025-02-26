@@ -1,5 +1,6 @@
 import logging
-from openai import OpenAI
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import permission_classes
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -7,53 +8,46 @@ from chefchat.config import OPENAI_API_KEY
 from recipes.serializers import ChatRequestSerializer
 from recipes.vector.index import query_index_with_context
 from recipes.models import ChatLog, Recipe
+from recipes.services.prompt_generator import generate_prompt_messages
+from recipes.services.query_classifier import classify_query
+import openai
+client = openai
 
 log = logging.getLogger(__name__)
 
 # Make sure your OpenAI API key is set
-client = OpenAI(api_key=OPENAI_API_KEY)
-
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def chat_interaction(request):
+    log.debug(f"Authorized user: {request.user}")
+    log.debug(f"Authorization header: {request.headers.get('Authorization')}")
+    log.debug(f"Is authenticated: {request.user.is_authenticated}")
+
     serializer = ChatRequestSerializer(data=request.data)
     if serializer.is_valid():
         user_message = serializer.validated_data['message']
 
+        # Todo classify is not working
+        query_type = classify_query(user_message)
+        log.debug(f"Query type: {query_type}")
+
         # Retrieve relevant recipes from the FAISS index
         try:
-            recipe_ids, distances = query_index_with_context(user_message, k=3)
+            recipe_ids, distances = query_index_with_context(user_message, k=7)
             recipes = Recipe.objects.filter(id__in=recipe_ids)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Build the context with the retrieved recipes
-        context_text = "Relevant recipes:\n"
-        for recipe in recipes:
-            context_text += f"- {recipe.title}\n"
-            context_text += f"  Ingredients (raw): {recipe.ingredients_raw}\n"
-            context_text += f"  Ingredients (structured): {recipe.ingredients_structured}\n"
-            context_text += f"  Instructions: {recipe.instructions}\n"
-            context_text += f"  This is a cookidoo recipe.\n" if recipe.is_cookidoo else "  This is not a cookidoo recipe.\n"
-            context_text += f"  This recipe can be frozen.\n" if recipe.can_freeze else "  This recipe cannot be frozen.\n"
-            context_text += f"  Number of People: {recipe.number_of_people}\n"
-            context_text += f"  Work Duration: {recipe.duration_work} minutes\n"
-            context_text += f"  Total Duration: {recipe.duration_total} minutes\n"
 
-        log.debug(context_text)
-        # Construct the prompt for the LLM
-        messages = [
-            {"role": "system", "content": "You are a helpful cooking assistant. Only use information from the context provided. If there is nothing useful, respond with: 'Sorry, but I could not find anything related to your request.'"},
-            {"role": "user", "content": user_message},
-            {"role": "assistant", "content": context_text},
-            {"role": "user", "content": "Analyze the language of the user content and answer in the same language. For example if the user writes in German, respond in German."},
-            {"role": "user", "content": "Please provide a helpful response or suggestion based on the above."}
-        ]
+        # Build the context with the retrieved recipes
+        messages = generate_prompt_messages(user_message, recipes)
+        log.debug(messages)
 
         # Call OpenAI's ChatCompletion API
         try:
             response = client.chat.completions.create(model="gpt-3.5-turbo",
             messages=messages,
-            max_tokens=150,
+            max_tokens=300,
             temperature=0.7)
             bot_response = response.choices[0].message.content.strip()
         except Exception as e:
@@ -68,3 +62,11 @@ def chat_interaction(request):
         return Response({"response": bot_response}, status=status.HTTP_200_OK)
     else:
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def logout_view(request):
+    request.user.auth_token.delete()
+    return Response({"detail": "Successfully logged out."},
+                    status=status.HTTP_200_OK)

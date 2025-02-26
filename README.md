@@ -42,14 +42,20 @@ To set up the development environment, follow these steps:
     python manage.py runserver
     ```
 ```
+4. Navigate to the frontend directory and install dependencies:
+    ```bash
+    cd chefchat-frontend
+    npm install
+    ```
 
-## Development Approach
+5. Start the frontend development server:
+    ```bash
+    npm run dev
+    ```
 
-The development of ChefChat will be incremental, starting with a clear understanding of the product goals and gradually drilling down into the implementation details. Key considerations include:
+## ChatWindow Component
 
-- **Product Perspective**: Define the desired features and user experience.
-- **Technology Selection**: Evaluate and choose appropriate technologies, such as Retrieval-Augmented Generation (RAG) for managing large prompts.
-- **Step-by-Step Implementation**: Break down the project into manageable steps, starting with core features and expanding functionality over time.
+The ChatWindow component is built using React and provides the main interface for user interactions. It consists of a chat history section and an input section for sending messages. The component maintains the state of the chat messages and handles sending messages to the backend.
 
 ## Questions and Feedback
 
