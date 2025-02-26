@@ -1,4 +1,7 @@
 import logging
+from rest_framework.response import Response
+from rest_framework import status
+from recipes.vector.index import query_index_with_context
 from recipes.models import ChatLog, Recipe
 
 log = logging.getLogger(__name__)
@@ -81,22 +84,35 @@ Finalization: After the weekly plan has been adjusted and the user is satisfied,
 # If there is nothing useful in the context, respond with: 'Sorry, but I could not find anything related to your request.'
 
 
-def load_full_recipe_list():
-    """
-    Load the full list of recipes from the database.
-    """
-    recipes = Recipe.objects.all()
-    context_lines = ["List of recipes:"]
-    for recipe in recipes:
-        context_lines.append(f"- {recipe.title}\n")
-        context_lines.append(f"  Instructions: {recipe.instructions[:50]}\n")
-    return Recipe.objects.all()
+def gen_prompt(user_message: str, context: str) -> list:
+    prompt = [
+        {"role": "system",
+         "content": BASE_PROPMT,
+        },
+        {"role": "user", "content": user_message},
+        {"role": "assistant", "content": context},
+        {"role": "user",
+        "content": (
+            "Analyze the language of the user content and answer in the same language. "
+            "For example, if the user writes in German, respond in German."
+            )
+        },
+        {"role": "user", "content": "Please provide a helpful response or suggestion based on the above."}
+    ]
+    return prompt
 
-
-def build_recipe_context(recipes) -> str:
+def detailed_plan_prompt(user_message: str) -> list:
     """
-    Build a context string from a list or queryset of recipe objects.
+    Generate the prompt messages list for the chat API using the user message
+    and a collection of recipe objects.
     """
+    log.debug(f"Calling detailed_plan_prompt with user_message: {user_message}")
+    try:
+        recipe_ids, distances = query_index_with_context(user_message, k=7)
+        recipes = Recipe.objects.filter(id__in=recipe_ids)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
     context_lines = ["Relevant recipes:"]
     for recipe in recipes:
         context_lines.append(f"- {recipe.title}\n")
@@ -114,28 +130,18 @@ def build_recipe_context(recipes) -> str:
         context_lines.append(f"  Number of People: {recipe.number_of_people}\n")
         context_lines.append(f"  Work Duration: {recipe.duration_work} minutes\n")
         context_lines.append(f"  Total Duration: {recipe.duration_total} minutes\n")
-    return "\n".join(context_lines)
+    log.debug(f"Created context with {len(recipes)} recipes")
+    return gen_prompt(user_message, "\n".join(context_lines))
 
-def generate_prompt_messages(user_message: str, recipes) -> list:
+
+def planning_propmpt(user_message: str) -> list:
     """
     Generate the prompt messages list for the chat API using the user message
-    and a collection of recipe objects.
+    and a list of recipe-titles (maybe summaries).
     """
-    context_text = build_recipe_context(recipes)
-    
-    messages = [
-        {"role": "system",
-         "content": BASE_PROPMT,
-        },
-        {"role": "user", "content": user_message},
-        {"role": "assistant", "content": context_text},
-        {"role": "user",
-        "content": (
-            "Analyze the language of the user content and answer in the same language. "
-            "For example, if the user writes in German, respond in German."
-            )
-        },
-        {"role": "user", "content": "Please provide a helpful response or suggestion based on the above."}
-    ]
-    log.debug(f"Prompt: messages: {messages}")
-    return messages
+    recipes = Recipe.objects.all()
+    context_lines = ["List of recipes:"]
+    for recipe in recipes:
+        context_lines.append(f"- {recipe.title}\n")
+        context_lines.append(f"  Instructions: {recipe.ingredients_raw}\n")
+    return gen_prompt(user_message, "\n".join(context_lines))

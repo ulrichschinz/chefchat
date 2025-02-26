@@ -40,3 +40,14 @@
 .read-the-docs {
   color: #888;
 }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+.chat-window {
+  height: 100vh;
+  overflow-y: auto;
+}

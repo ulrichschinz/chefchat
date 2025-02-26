@@ -8,7 +8,7 @@ from chefchat.config import OPENAI_API_KEY
 from recipes.serializers import ChatRequestSerializer
 from recipes.vector.index import query_index_with_context
 from recipes.models import ChatLog, Recipe
-from recipes.services.prompt_generator import generate_prompt_messages
+from recipes.services.prompt_generator import detailed_plan_prompt, planning_propmpt
 from recipes.services.query_classifier import classify_query
 import openai
 client = openai
@@ -19,29 +19,27 @@ log = logging.getLogger(__name__)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def chat_interaction(request):
-    log.debug(f"Authorized user: {request.user}")
-    log.debug(f"Authorization header: {request.headers.get('Authorization')}")
-    log.debug(f"Is authenticated: {request.user.is_authenticated}")
-
     serializer = ChatRequestSerializer(data=request.data)
     if serializer.is_valid():
         user_message = serializer.validated_data['message']
 
         # Todo classify is not working
         query_type = classify_query(user_message)
-        log.debug(f"Query type: {query_type}")
+        log.info(f"Classified query as: {query_type}")
+        messages = []
+        # if "" in classification:
+        #     return "planning_request"
+        # elif "planning_change_request" in classification:
+        #     return "planning_change_request"
+        # elif "use_plan_request" in classification:
+        #     return "use_plan_request"
+        # elif "clarify if you want to create a new plan" in classification:
+        #     return "clarify_request"
 
-        # Retrieve relevant recipes from the FAISS index
-        try:
-            recipe_ids, distances = query_index_with_context(user_message, k=7)
-            recipes = Recipe.objects.filter(id__in=recipe_ids)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-        # Build the context with the retrieved recipes
-        messages = generate_prompt_messages(user_message, recipes)
-        log.debug(messages)
+        if query_type == "planning_request":
+            messages = planning_propmpt(user_message)
+        elif query_type == "detailed_request":
+            messages = detailed_plan_prompt(user_message)
 
         # Call OpenAI's ChatCompletion API
         try:
