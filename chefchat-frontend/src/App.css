@@ -46,8 +46,3 @@ html, body {
   margin: 0;
   overflow: hidden;
 }
-
-.chat-window {
-  height: 100vh;
-  overflow-y: auto;
-}

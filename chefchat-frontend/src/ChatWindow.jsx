@@ -1,4 +1,5 @@
 import React, { useState, useContext } from 'react';
+import ReactMarkdown from 'react-markdown';
 import './ChatWindow.css';
 import { sendAuthenticatedRequest } from './api';
 import { AuthContext } from './AuthContext';
@@ -50,7 +51,9 @@ const ChatWindow = () => {
       <div className="chat-history">
         {messages.map((msg, index) => (
           <div key={index} className={`chat-message ${msg.sender}`}>
-            <div className="message-text">{msg.text}</div>
+            <div className="message-text">
+              <ReactMarkdown>{msg.text}</ReactMarkdown>
+            </div>
           </div>
         ))}
         {loading && <div className="chat-message bot">Lädt...</div>}

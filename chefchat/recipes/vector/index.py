@@ -1,58 +1,87 @@
-import faiss
 import numpy as np
-import os
-import json
-from django.conf import settings
-from chefchat.config import FAISS_INDEX_FILE, FAISS_MAPPING_FILE
-from recipes.models import Recipe
+import logging
+import uuid
+from qdrant_client import QdrantClient
+from qdrant_client.http.models import PointStruct, VectorParams, Distance, Filter, FieldCondition, MatchValue
+from chefchat.config import QDRANT_COLLECTION_NAME
 from .embeddings import generate_embedding
+from recipes.models import QdrantMapping
 
-def build_faiss_index(recipes):
+client = QdrantClient(url="http://localhost:6333")
+log = logging.getLogger(__name__)
+
+def build_qdrant_index(user_id, items, text_fields, id_field):
     embeddings = []
-    mapping = []
-    for recipe in recipes:
+    points = []
+    for item in items:
         # Combine relevant fields into a single text string
-        text = f"{recipe.title}\n{recipe.ingredients_raw}\n{recipe.instructions}"
+        log.debug(f"Building index for item {item}")
+        log.debug(f"textfields: {text_fields}")
+        text = "\n".join([item[field] for field in text_fields])
         emb = generate_embedding(text)
         embeddings.append(emb)
-        mapping.append(recipe.id)
-    embeddings = np.vstack(embeddings)
-    dimension = embeddings.shape[1]
-    index = faiss.IndexFlatL2(dimension)
-    index.add(embeddings)
-    return index,mapping
+        points.append(PointStruct(
+            id=str(uuid.uuid4()),
+            vector=emb.tolist(),
+            payload={
+                'user_id': user_id,
+                'title': item.get('title', ''),
+                'type': item.get('type', 'unknown'),
+                'additional_info': item.get('additional_info', ''),
+                'original_id': f"{user_id}_{item[id_field]}"
+            }
+        ))
 
-def save_index_with_mapping(index, mapping):
-    """
-    Save the FAISS index and its associated mapping.
-    """
-    with open(FAISS_INDEX_FILE, "wb") as f:
-        faiss.write_index(index, str(FAISS_INDEX_FILE))
-    with open(FAISS_MAPPING_FILE, 'w') as f:
-        json.dump(mapping, f)
+    # Create collection if it doesn't exist
+    client.recreate_collection(
+        collection_name=QDRANT_COLLECTION_NAME,
+        vectors_config=VectorParams(size=len(embeddings[0]), distance=Distance.COSINE)
+    )
 
+    # Upload points to Qdrant
+    client.upsert(
+        collection_name=QDRANT_COLLECTION_NAME,
+        points=points
+    )
 
-def load_index_with_mapping():
-    """
-    Load the FAISS index and mapping from disk.
-    """
-    if FAISS_INDEX_FILE.exists() and FAISS_MAPPING_FILE.exists():
-        index = faiss.read_index(str(FAISS_INDEX_FILE))
-        with open(FAISS_MAPPING_FILE, 'r') as f:
-            mapping = json.load(f)
-        return index, mapping
-    return None, None
+    # Save mapping to database
+    for point in points:
+        QdrantMapping.objects.update_or_create(
+            point_id=point.id,
+            defaults={'payload': point.payload}
+        )
 
+    return points
 
-def query_index_with_context(query_text: str, k: int = 5):
+def query_index_with_context(user_id, query_text: str, k: int = 5):
     """
-    Query the FAISS index using the query text and return a list of matching recipe IDs and the distances.
+    Query the Qdrant index using the query text and return a list of matching items and the distances.
     """
-    query_embedding = generate_embedding(query_text).reshape(1, -1)
-    index, mapping = load_index_with_mapping()
-    if index is None or mapping is None:
-        raise Exception("Index or mapping not found. Please rebuild the index first.")
-    distances, indices = index.search(query_embedding, k)
-    # Map FAISS indices to recipe IDs.
-    recipe_ids = [mapping[i] for i in indices[0] if i < len(mapping)]
-    return recipe_ids, distances
+    query_embedding = generate_embedding(query_text).tolist()
+    search_filter = Filter(
+        must=[
+            FieldCondition(
+                key="payload.user_id",
+                match=MatchValue(value=user_id)
+            )
+        ]
+    )
+    search_result = client.search(
+        collection_name=QDRANT_COLLECTION_NAME,
+        query_vector=query_embedding,
+        limit=k,
+        query_filter=search_filter
+    )
+
+    # Load mapping from database
+    mapping = {mapping.point_id: mapping.payload
+               for mapping in QdrantMapping.objects.all()}
+
+    # Map Qdrant results to items
+    results = []
+    for result in search_result:
+        item = mapping.get(result.id)
+        if item:
+            item['distance'] = result.score
+            results.append(item)
+    return results
