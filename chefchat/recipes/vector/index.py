@@ -1,11 +1,13 @@
 import numpy as np
 import logging
 import uuid
+from django.contrib.auth import get_user_model
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import PointStruct, VectorParams, Distance, Filter, FieldCondition, MatchValue
 from chefchat.config import QDRANT_COLLECTION_NAME
 from .embeddings import generate_embedding
 from recipes.models import QdrantMapping
+from recipes.services.index_builder import build_index_items
 
 client = QdrantClient(url="http://localhost:6333")
 log = logging.getLogger(__name__)
@@ -85,3 +87,12 @@ def query_index_with_context(user_id, query_text: str, k: int = 5):
             item['distance'] = result.score
             results.append(item)
     return results
+
+
+def rebuild_index():
+    User = get_user_model()
+    all_users = User.objects.all()
+    for user in all_users:
+        items = build_index_items(user)
+        log.debug(f"Items: {items}")
+        build_qdrant_index(user.id, items, text_fields=['title', 'content'], id_field='id')

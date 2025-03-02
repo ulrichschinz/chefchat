@@ -1,17 +1,7 @@
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from recipes.models import Recipe
-from recipes.services.index_builder import build_index_items
-from recipes.vector.index import build_qdrant_index
-
-def rebuild_index():
-    items = build_index_items()
-
-    if items.exists():
-        build_qdrant_index(items)
-        print("Qdrant index rebuilt.")
-    else:
-        print("No items to index, index not rebuilt.")
+from recipes.vector.index import rebuild_index
 
 @receiver(post_save, sender=Recipe)
 def update_index_on_save(sender, instance, **kwargs):
