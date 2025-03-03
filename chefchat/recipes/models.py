@@ -1,6 +1,9 @@
 from django.db import models
+import logging
 from django.contrib.auth.models import User
 from recipes.services.llm_services import build_structured_data
+
+log = logging.getLogger(__name__)
 
 
 class Recipe(models.Model):

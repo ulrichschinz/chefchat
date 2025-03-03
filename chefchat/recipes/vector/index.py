@@ -1,6 +1,6 @@
-import numpy as np
 import logging
 import uuid
+import json
 from django.contrib.auth import get_user_model
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import PointStruct, VectorParams, Distance, Filter, FieldCondition, MatchValue
@@ -12,28 +12,38 @@ from recipes.services.index_builder import build_index_items
 client = QdrantClient(url="http://localhost:6333")
 log = logging.getLogger(__name__)
 
-def build_qdrant_index(user_id, items, text_fields, id_field):
+def convert_sets(obj):
+    if isinstance(obj, set):
+        return list(obj)
+    elif isinstance(obj, dict):
+        return {k: convert_sets(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_sets(item) for item in obj]
+    else:
+        return obj
+
+def build_qdrant_index(user, items, text_fields, id_field):
     embeddings = []
     points = []
     for item in items:
         # Combine relevant fields into a single text string
-        log.debug(f"Building index for item {item}")
-        log.debug(f"textfields: {text_fields}")
         text = "\n".join([item[field] for field in text_fields])
         emb = generate_embedding(text)
         embeddings.append(emb)
+        payload = {
+            'user_id': user.id,
+            'title': item.get('title', ''),
+            'type': item.get('type', 'unknown'),
+            'additional_info': item.get('additional_info', ''),
+            'original_id': f"{user.id}_{item.get(id_field, '')}"
+        }
+        # Ensure payload does not contain sets
+        payload = convert_sets(payload)
         points.append(PointStruct(
             id=str(uuid.uuid4()),
             vector=emb.tolist(),
-            payload={
-                'user_id': user_id,
-                'title': item.get('title', ''),
-                'type': item.get('type', 'unknown'),
-                'additional_info': item.get('additional_info', ''),
-                'original_id': f"{user_id}_{item[id_field]}"
-            }
+            payload=payload
         ))
-
     # Create collection if it doesn't exist
     client.recreate_collection(
         collection_name=QDRANT_COLLECTION_NAME,
@@ -55,19 +65,23 @@ def build_qdrant_index(user_id, items, text_fields, id_field):
 
     return points
 
-def query_index_with_context(user_id, query_text: str, k: int = 5):
+def query_index_with_context(user, query_text: str, k: int = 5):
     """
     Query the Qdrant index using the query text and return a list of matching items and the distances.
     """
     query_embedding = generate_embedding(query_text).tolist()
+
+    # Create the filter for the user_id
     search_filter = Filter(
         must=[
             FieldCondition(
-                key="payload.user_id",
-                match=MatchValue(value=user_id)
+                key="user_id",
+                match=MatchValue(value=user.id)
             )
         ]
     )
+
+    # Perform the search with the filter
     search_result = client.search(
         collection_name=QDRANT_COLLECTION_NAME,
         query_vector=query_embedding,
@@ -76,8 +90,7 @@ def query_index_with_context(user_id, query_text: str, k: int = 5):
     )
 
     # Load mapping from database
-    mapping = {mapping.point_id: mapping.payload
-               for mapping in QdrantMapping.objects.all()}
+    mapping = {mapping.point_id: mapping.payload for mapping in QdrantMapping.objects.filter(payload__user_id=user.id)}
 
     # Map Qdrant results to items
     results = []
@@ -88,11 +101,11 @@ def query_index_with_context(user_id, query_text: str, k: int = 5):
             results.append(item)
     return results
 
-
 def rebuild_index():
     User = get_user_model()
     all_users = User.objects.all()
     for user in all_users:
         items = build_index_items(user)
-        log.debug(f"Items: {items}")
-        build_qdrant_index(user.id, items, text_fields=['title', 'content'], id_field='id')
+        log.debug(f"Items: {len(items)}")
+        build_qdrant_index(user, items, text_fields=['title', 'content'], id_field='id')
+    log.debug("Index rebuilt")

@@ -36,20 +36,21 @@ To set up the development environment, follow these steps:
     pip install -r requirements.txt
     ```
 
-2. Configure your API key for OpenAI.
-```markdown
 2. Configure your API key for OpenAI:
 
     ```bash
     export OPENAI_API_KEY='your-api-key-here'
     ```
 
-3. Run the application:
+3. Run migrations, create superuser, run the application:
 
     ```bash
+    python manage.py makemigrations
+    python manage.py migrate
+    python manage.py createsuperuser
     python manage.py runserver
     ```
-```
+
 4. Navigate to the frontend directory and install dependencies:
     ```bash
     cd chefchat-frontend

@@ -21,10 +21,11 @@ def call_llm(messages: list,
     """
     # Call OpenAI's ChatCompletion API
     try:
-        response = client.chat.completions.create(model=model,
-                                                   messages=messages,
-                                                   max_tokens=max_tokens,
-                                                   temperature=temperature)
+        response = client.chat.completions.create(
+          model=model,
+          messages=messages,
+          max_tokens=max_tokens,
+          temperature=temperature)
         return response.choices[0].message.content.strip()
     except Exception as e:
         return f"LLM call failed: {str(e)}"
@@ -140,8 +141,10 @@ def build_structured_data(raw_data: str) -> dict:
         ]
 
     structured_data_str = call_llm(prompt) 
-    log.debug(f"Structured data: {structured_data_str}")
+    log.debug(f"Structured data to be jsonized !!!: {structured_data_str}")
     return json.loads(structured_data_str)
+    
+
     
 
     

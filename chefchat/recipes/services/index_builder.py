@@ -1,9 +1,12 @@
+import logging
 from recipes.models import Recipe,RecipesSnapshot
+
+log = logging.getLogger(__name__)
 
 def build_index_items(user):
     
     # Fetch all recipes from the database
-    recipes = Recipe.objects.all()
+    recipes = Recipe.objects.filter(user=user)
 
     # Prepare the data
     items = []
@@ -26,13 +29,16 @@ def build_index_items(user):
         })
         snapshot.append({
             'title': recipe.title,
-            'content': f"{recipe.ingredients_structured}",
+            'content': f"{recipe.ingredients_raw}",
         })
 
+    log.debug(f"snapshot: {snapshot}")
     recipes_snapshot = RecipesSnapshot.objects.create(
         user=user,
         snapshot=snapshot
     )
+
+    log.debug(f"Recipes snapshot created: {recipes_snapshot}")
 
     items.append({
         'id': recipes_snapshot.id,
