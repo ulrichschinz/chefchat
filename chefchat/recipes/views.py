@@ -6,7 +6,7 @@ from rest_framework import status
 from recipes.serializers import ChatRequestSerializer
 from recipes.services.llm_services import call_llm
 from recipes.models import ChatLog
-from recipes.services.prompt_generator import context_builder
+from recipes.services.prompt_generator import build_prompt
 
 log = logging.getLogger(__name__)
 
@@ -16,9 +16,9 @@ def chat_interaction(request):
     serializer = ChatRequestSerializer(data=request.data)
     if serializer.is_valid():
         user_message = serializer.validated_data['message']
-        messages = context_builder(user_message, request.user)
+        prompt = build_prompt(request.user, user_message)
         try:
-            bot_response = call_llm(messages=messages)
+            bot_response = call_llm(messages=prompt)
         except Exception as e:
             return Response({"error": "LLM call failed: " + str(e)},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
