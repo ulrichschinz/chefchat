@@ -104,5 +104,6 @@ def build_prompt(user, user_message: str) -> list:
         prompt.append({"role": "assistant", "content": chatlog.bot_response})
 
     prompt.append({"role": "user", "content": user_message})
+    print(f"Prompt: {prompt}")
     return prompt
 

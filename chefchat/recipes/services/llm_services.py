@@ -34,6 +34,10 @@ def build_structured_data(raw_data: str) -> dict:
     context = """
     Build structured data from unstructured text.
     You will recieve a string that contains unstructured data.
+    Take care to replace rational numbers with floats, this is important!!
+    If you have a rational number like 1/4, replace it with 0.25.
+    You can also stringify it, like 1/4 -> "1/4".
+    But never leave a rational number as is.
     You generate structured data from it.
     Example:
     Input:

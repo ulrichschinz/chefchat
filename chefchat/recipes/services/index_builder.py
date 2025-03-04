@@ -15,9 +15,10 @@ def build_index_items(user):
         items.append({
             'id': recipe.id,
             'title': recipe.title,
-            'content': f"{recipe.ingredients_raw}\n{recipe.ingredients_structured}\n{recipe.instructions}\n",
+            'content': f"{recipe.description}\n{recipe.ingredients_raw}\n{recipe.ingredients_structured}\n{recipe.instructions}\n",
             'type': 'recipe',
             'additional_info': {
+                'description': recipe.description,
                 'ingredients_raw': recipe.ingredients_raw,
                 'ingredients_structured': recipe.ingredients_structured,
                 'instructions': recipe.instructions,
