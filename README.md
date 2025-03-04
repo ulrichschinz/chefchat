@@ -2,10 +2,7 @@
 
 ### Brainstorm
 
-* build history with clear datastructures
 * think about snapshotting and when, procedure for history handling
-* get all in vectordb
-* query vectordb with latest context
 * enrich overall context including history with vectordb information
 * frontend form for add recipe / add option to chat
 
