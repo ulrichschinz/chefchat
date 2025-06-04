@@ -17,6 +17,7 @@ local_settings.py
 env/
 venv/
 ENV/
+.claude/
 
 # If using pipenv
 Pipfile.lock
@@ -53,3 +54,31 @@ faiss_mapping.json
 # Logfiles
 app.log
 stdout.log
+*.log
+server*.log
+
+# Database files
+*.db
+*.sqlite3
+chefchat.db
+chroma_db/
+
+# Backup and temporary files
+backup_json_db/
+*_backup*
+*_old*
+*.tmp
+*.cache
+
+# Search and vector databases
+faiss_index.index
+faiss_mapping.json
+recipes_search.json
+chroma_db/
+
+# Migration and test files
+migrate_to_sqlite.py
+test_*.py
+
+# Data files that shouldn't be committed
+chefchat_data.json
